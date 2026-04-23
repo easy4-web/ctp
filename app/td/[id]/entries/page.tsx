@@ -19,6 +19,8 @@ export default function EntriesPage({ params }: { params: Promise<{ id: string }
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState('')
   const [filter, setFilter] = useState<'all' | 'M' | 'F'>('all')
   const [search, setSearch] = useState('')
 
@@ -27,10 +29,7 @@ export default function EntriesPage({ params }: { params: Promise<{ id: string }
       fetch(`/api/tournaments/${id}`),
       fetch(`/api/submissions?tournament_id=${id}`),
     ])
-    if (tRes.ok) {
-      const t = await tRes.json()
-      setTournamentName(t.name)
-    }
+    if (tRes.ok) setTournamentName((await tRes.json()).name)
     if (sRes.ok) setSubmissions(await sRes.json())
     setLoading(false)
   }, [])
@@ -40,10 +39,18 @@ export default function EntriesPage({ params }: { params: Promise<{ id: string }
   }, [params, loadData])
 
   async function handleDelete(id: string) {
-    if (!confirm('Delete this entry? This cannot be undone.')) return
     setDeleting(id)
+    setConfirmId(null)
+    setDeleteError('')
+
     const res = await fetch(`/api/submissions/${id}`, { method: 'DELETE' })
-    if (res.ok) setSubmissions(prev => prev.filter(s => s.id !== id))
+
+    if (res.ok) {
+      setSubmissions(prev => prev.filter(s => s.id !== id))
+    } else {
+      const body = await res.json().catch(() => ({}))
+      setDeleteError(body.error ?? `Delete failed (${res.status})`)
+    }
     setDeleting(null)
   }
 
@@ -78,7 +85,12 @@ export default function EntriesPage({ params }: { params: Promise<{ id: string }
           <span className="text-gray-500 text-sm">{submissions.length} total</span>
         </div>
 
-        {/* Filters */}
+        {deleteError && (
+          <div className="mb-4 rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}>
+            {deleteError}
+          </div>
+        )}
+
         <div className="flex gap-3 mb-6 flex-wrap">
           <input
             type="text"
@@ -128,21 +140,22 @@ export default function EntriesPage({ params }: { params: Promise<{ id: string }
                           <th className="text-left px-4 py-3 text-gray-500 font-medium">Category</th>
                           <th className="text-right px-4 py-3 text-gray-500 font-medium">Distance</th>
                           <th className="text-right px-4 py-3 text-gray-500 font-medium">Submitted</th>
-                          <th className="px-4 py-3" />
+                          <th className="px-4 py-3 w-28" />
                         </tr>
                       </thead>
                       <tbody>
                         {subs
                           .sort((a, b) => a.distance_m - b.distance_m)
                           .map((s, i) => (
-                            <tr key={s.id}
-                              style={{
-                                background: i === 0 ? 'rgba(245,164,35,0.05)' : '#111',
-                                borderTop: i > 0 ? '1px solid #1f1f1f' : undefined
-                              }}>
-                              <td className="px-4 py-3 font-medium flex items-center gap-2">
-                                {i === 0 && <span className="text-xs font-bold" style={{ color: '#F5A423' }}>★</span>}
-                                {s.player_name}
+                            <tr key={s.id} style={{
+                              background: i === 0 ? 'rgba(245,164,35,0.05)' : '#111',
+                              borderTop: i > 0 ? '1px solid #1f1f1f' : undefined
+                            }}>
+                              <td className="px-4 py-3 font-medium">
+                                <span className="flex items-center gap-2">
+                                  {i === 0 && <span className="text-xs font-bold" style={{ color: '#F5A423' }}>★</span>}
+                                  {s.player_name}
+                                </span>
                               </td>
                               <td className="px-4 py-3 text-gray-400">{s.gender === 'M' ? 'Men' : 'Women'}</td>
                               <td className="px-4 py-3 text-right font-bold" style={{ color: i === 0 ? '#F5A423' : '#f0f0f0' }}>
@@ -152,14 +165,33 @@ export default function EntriesPage({ params }: { params: Promise<{ id: string }
                                 {new Date(s.created_at).toLocaleString('et-EE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                               </td>
                               <td className="px-4 py-3 text-right">
-                                <button
-                                  onClick={() => handleDelete(s.id)}
-                                  disabled={deleting === s.id}
-                                  className="text-xs px-2.5 py-1 rounded-lg transition-colors disabled:opacity-40"
-                                  style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}
-                                >
-                                  {deleting === s.id ? '...' : 'Delete'}
-                                </button>
+                                {confirmId === s.id ? (
+                                  <span className="flex items-center justify-end gap-1">
+                                    <button
+                                      onClick={() => handleDelete(s.id)}
+                                      disabled={deleting === s.id}
+                                      className="text-xs px-2.5 py-1 rounded-lg font-semibold transition-colors"
+                                      style={{ background: 'rgba(239,68,68,0.2)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}
+                                    >
+                                      {deleting === s.id ? '...' : 'Confirm'}
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmId(null)}
+                                      className="text-xs px-2 py-1 rounded-lg text-gray-500 hover:text-gray-300"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </span>
+                                ) : (
+                                  <button
+                                    onClick={() => { setConfirmId(s.id); setDeleteError('') }}
+                                    disabled={deleting === s.id}
+                                    className="text-xs px-2.5 py-1 rounded-lg transition-colors disabled:opacity-40"
+                                    style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}
+                                  >
+                                    Delete
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           ))}
