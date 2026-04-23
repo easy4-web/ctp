@@ -90,9 +90,15 @@ function TournamentRow({ t, archived = false }: { t: Tournament; archived?: bool
         <p className="text-gray-500 text-sm mt-1">{new Date(t.date).toLocaleDateString('et-EE')}</p>
       </div>
       <div className="flex gap-2">
-        <Link href={`/td/${t.id}`} className="px-3 py-1.5 text-sm rounded-lg transition-colors"
+        <Link href={`/t/${t.id}`} target="_blank"
+          className="px-3 py-1.5 text-sm rounded-lg transition-colors text-gray-400 hover:text-white"
+          style={{ background: '#111', border: '1px solid #2a2a2a' }}>
+          View
+        </Link>
+        <Link href={`/td/${t.id}`}
+          className="px-3 py-1.5 text-sm rounded-lg transition-colors"
           style={{ background: '#2a2a2a', color: '#f0f0f0' }}>
-          {archived ? 'View' : 'Manage'}
+          Manage
         </Link>
       </div>
     </div>
