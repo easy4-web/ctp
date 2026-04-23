@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 
 type Tournament = { id: string; name: string; date: string; active: boolean }
@@ -14,12 +15,10 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
   const [newHole, setNewHole] = useState({ hole_number: '', sponsor_name: '' })
   const [adding, setAdding] = useState(false)
   const [saving, setSaving] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    params.then(({ id }) => {
-      setTournamentId(id)
-      loadData(id)
-    })
+    params.then(({ id }) => { setTournamentId(id); loadData(id) })
   }, [params])
 
   async function loadData(id: string) {
@@ -35,8 +34,7 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
   async function toggleTournamentActive() {
     if (!tournament) return
     const res = await fetch(`/api/tournaments/${tournamentId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ active: !tournament.active }),
     })
     if (res.ok) setTournament({ ...tournament, active: !tournament.active })
@@ -45,8 +43,7 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
   async function toggleHole(hole: Hole) {
     setSaving(hole.id)
     const res = await fetch(`/api/holes/${hole.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ active: !hole.active }),
     })
     if (res.ok) setHoles(holes.map(h => h.id === hole.id ? { ...h, active: !h.active } : h))
@@ -56,8 +53,7 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
   async function updateSponsor(hole: Hole, sponsor: string) {
     setSaving(hole.id)
     const res = await fetch(`/api/holes/${hole.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sponsor_name: sponsor.trim() || null }),
     })
     if (res.ok) setHoles(holes.map(h => h.id === hole.id ? { ...h, sponsor_name: sponsor.trim() || null } : h))
@@ -74,17 +70,10 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
     const num = parseInt(newHole.hole_number)
     if (isNaN(num) || num < 1) return
     setAdding(true)
-
     const res = await fetch('/api/holes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tournament_id: tournamentId,
-        hole_number: num,
-        sponsor_name: newHole.sponsor_name.trim() || null,
-      }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tournament_id: tournamentId, hole_number: num, sponsor_name: newHole.sponsor_name.trim() || null }),
     })
-
     if (res.ok) {
       const hole = await res.json()
       setHoles([...holes, hole].sort((a, b) => a.hole_number - b.hole_number))
@@ -93,151 +82,131 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
     setAdding(false)
   }
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-400">Loading...</div>
-  if (!tournament) return <div className="flex items-center justify-center min-h-screen text-gray-400">Tournament not found.</div>
+  function copyLink() {
+    const url = `${window.location.origin}/t/${tournamentId}`
+    navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
+  if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-500">Loading...</div>
+  if (!tournament) return <div className="flex items-center justify-center min-h-screen text-gray-500">Not found.</div>
+
+  const inputStyle = { background: '#191919', border: '1px solid #2a2a2a' }
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/t/${tournamentId}` : ''
 
   return (
-    <div className="min-h-screen p-6 max-w-3xl mx-auto">
-      <div className="mb-8">
-        <Link href="/td/dashboard" className="text-gray-400 hover:text-white text-sm">← Back</Link>
-        <div className="flex items-start justify-between mt-3">
+    <div className="min-h-screen" style={{ background: '#0f0f0f' }}>
+      <header className="border-b px-6 py-4 flex items-center gap-4" style={{ borderColor: '#2a2a2a' }}>
+        <Image src="/easy4-logo-white.png" alt="Easy4" width={80} height={30} className="object-contain" />
+        <div className="w-px h-6 bg-gray-700" />
+        <Link href="/td/dashboard" className="text-gray-400 hover:text-white text-sm transition-colors">← Tournaments</Link>
+      </header>
+
+      <main className="p-6 max-w-3xl mx-auto">
+        <div className="flex items-start justify-between mt-2 mb-6">
           <div>
             <h1 className="text-2xl font-bold">{tournament.name}</h1>
-            <p className="text-gray-400 text-sm mt-1">{new Date(tournament.date).toLocaleDateString('et-EE')}</p>
+            <p className="text-gray-500 text-sm mt-1">{new Date(tournament.date).toLocaleDateString('et-EE')}</p>
           </div>
-          <button
-            onClick={toggleTournamentActive}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-              tournament.active
-                ? 'bg-red-900/40 text-red-400 hover:bg-red-900/60 border border-red-800'
-                : 'bg-green-900/40 text-green-400 hover:bg-green-900/60 border border-green-800'
-            }`}
-          >
+          <button onClick={toggleTournamentActive}
+            className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+            style={tournament.active
+              ? { background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }
+              : { background: 'rgba(245,164,35,0.1)', color: '#F5A423', border: '1px solid rgba(245,164,35,0.3)' }}>
             {tournament.active ? 'Deactivate' : 'Activate'}
           </button>
         </div>
+
+        {/* Share link */}
         {shareUrl && (
-          <div className="mt-4 flex items-center gap-2 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5">
-            <span className="text-gray-400 text-sm flex-1 truncate">{shareUrl}</span>
-            <button
-              onClick={() => navigator.clipboard.writeText(shareUrl)}
-              className="text-xs text-green-400 hover:text-green-300 font-medium shrink-0"
-            >
-              Copy link
+          <div className="flex items-center gap-3 rounded-xl px-4 py-3 mb-8" style={{ background: '#191919', border: '1px solid #2a2a2a' }}>
+            <span className="text-gray-500 text-sm flex-1 truncate">{shareUrl}</span>
+            <button onClick={copyLink}
+              className="text-xs font-semibold shrink-0 transition-colors"
+              style={{ color: copied ? '#4ade80' : '#F5A423' }}>
+              {copied ? 'Copied!' : 'Copy link'}
             </button>
           </div>
         )}
-      </div>
 
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-3">CTP Baskets</h2>
-        <div className="space-y-2">
+        {/* Holes */}
+        <p className="text-xs text-gray-600 uppercase tracking-widest mb-3 font-medium">CTP Baskets</p>
+        <div className="space-y-2 mb-6">
           {holes.map(hole => (
-            <HoleRow
-              key={hole.id}
-              hole={hole}
-              saving={saving === hole.id}
+            <HoleRow key={hole.id} hole={hole} saving={saving === hole.id}
               onToggle={() => toggleHole(hole)}
-              onSponsorSave={(s) => updateSponsor(hole, s)}
-              onDelete={() => deleteHole(hole.id)}
-            />
+              onSponsorSave={s => updateSponsor(hole, s)}
+              onDelete={() => deleteHole(hole.id)} />
           ))}
         </div>
-      </div>
 
-      <form onSubmit={addHole} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <p className="text-sm font-medium text-gray-300 mb-3">Add basket</p>
-        <div className="flex gap-3">
-          <input
-            type="number"
-            min="1"
-            max="18"
-            value={newHole.hole_number}
-            onChange={e => setNewHole({ ...newHole, hole_number: e.target.value })}
-            placeholder="Basket #"
-            className="w-28 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500"
-          />
-          <input
-            type="text"
-            value={newHole.sponsor_name}
-            onChange={e => setNewHole({ ...newHole, sponsor_name: e.target.value })}
-            placeholder="Sponsor (optional)"
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-green-500"
-          />
-          <button
-            type="submit"
-            disabled={adding}
-            className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 rounded-lg text-sm font-semibold transition-colors"
-          >
-            Add
-          </button>
-        </div>
-      </form>
+        {/* Add hole form */}
+        <form onSubmit={addHole} className="rounded-2xl p-4 border" style={{ background: '#191919', borderColor: '#2a2a2a' }}>
+          <p className="text-sm font-medium text-gray-400 mb-3">Add basket</p>
+          <div className="flex gap-3">
+            <input type="number" min="1" max="99" value={newHole.hole_number}
+              onChange={e => setNewHole({ ...newHole, hole_number: e.target.value })}
+              placeholder="#"
+              className="w-20 rounded-xl px-3 py-2 text-white text-sm outline-none text-center"
+              style={inputStyle} />
+            <input type="text" value={newHole.sponsor_name}
+              onChange={e => setNewHole({ ...newHole, sponsor_name: e.target.value })}
+              placeholder="Sponsor (optional)"
+              className="flex-1 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 outline-none"
+              style={inputStyle} />
+            <button type="submit" disabled={adding}
+              className="px-5 py-2 rounded-xl text-sm font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
+              style={{ background: '#F5A423' }}>
+              Add
+            </button>
+          </div>
+        </form>
+      </main>
     </div>
   )
 }
 
 function HoleRow({ hole, saving, onToggle, onSponsorSave, onDelete }: {
-  hole: Hole
-  saving: boolean
-  onToggle: () => void
-  onSponsorSave: (s: string) => void
-  onDelete: () => void
+  hole: Hole; saving: boolean
+  onToggle: () => void; onSponsorSave: (s: string) => void; onDelete: () => void
 }) {
-  const [editingSponsor, setEditingSponsor] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [sponsor, setSponsor] = useState(hole.sponsor_name ?? '')
 
   return (
-    <div className={`bg-gray-900 border rounded-xl p-4 flex items-center gap-4 ${hole.active ? 'border-gray-800' : 'border-gray-800 opacity-50'}`}>
-      <div className="w-16 text-center">
-        <span className="font-bold text-lg">#{hole.hole_number}</span>
-      </div>
+    <div className="rounded-2xl px-4 py-3 border flex items-center gap-4 transition-opacity"
+      style={{ background: '#191919', borderColor: '#2a2a2a', opacity: hole.active ? 1 : 0.5 }}>
+      <span className="text-xl font-black w-10 text-center" style={{ color: '#F5A423' }}>
+        {hole.hole_number}
+      </span>
       <div className="flex-1">
-        {editingSponsor ? (
+        {editing ? (
           <div className="flex gap-2">
-            <input
-              autoFocus
-              type="text"
-              value={sponsor}
-              onChange={e => setSponsor(e.target.value)}
-              className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-green-500"
-            />
-            <button
-              onClick={() => { onSponsorSave(sponsor); setEditingSponsor(false) }}
-              disabled={saving}
-              className="text-xs text-green-400 hover:text-green-300 font-medium"
-            >
-              Save
-            </button>
-            <button onClick={() => setEditingSponsor(false)} className="text-xs text-gray-500 hover:text-gray-300">Cancel</button>
+            <input autoFocus type="text" value={sponsor} onChange={e => setSponsor(e.target.value)}
+              className="flex-1 rounded-lg px-2 py-1 text-sm text-white outline-none"
+              style={{ background: '#111', border: '1px solid #3a3a3a' }} />
+            <button onClick={() => { onSponsorSave(sponsor); setEditing(false) }}
+              disabled={saving} className="text-xs font-semibold" style={{ color: '#F5A423' }}>Save</button>
+            <button onClick={() => setEditing(false)} className="text-xs text-gray-600 hover:text-gray-400">Cancel</button>
           </div>
         ) : (
-          <button onClick={() => setEditingSponsor(true)} className="text-sm text-left text-gray-300 hover:text-white">
-            {hole.sponsor_name ? (
-              <span className="text-yellow-400">{hole.sponsor_name}</span>
-            ) : (
-              <span className="text-gray-600 italic">No sponsor</span>
-            )}{' '}
-            <span className="text-gray-600 text-xs">(edit)</span>
+          <button onClick={() => setEditing(true)} className="text-sm text-left">
+            {hole.sponsor_name
+              ? <span style={{ color: '#F5A423' }}>{hole.sponsor_name}</span>
+              : <span className="text-gray-600 italic">No sponsor</span>}
+            <span className="text-gray-700 text-xs ml-2">(edit)</span>
           </button>
         )}
       </div>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onToggle}
-          disabled={saving}
-          className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
-            hole.active
-              ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-              : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-          }`}
-        >
-          {hole.active ? 'Active' : 'Inactive'}
-        </button>
-        <button onClick={onDelete} className="text-gray-600 hover:text-red-400 text-lg leading-none px-1">×</button>
-      </div>
+      <button onClick={onToggle} disabled={saving}
+        className="text-xs px-3 py-1.5 rounded-full font-semibold transition-colors"
+        style={hole.active
+          ? { background: 'rgba(245,164,35,0.15)', color: '#F5A423' }
+          : { background: '#2a2a2a', color: '#6b7280' }}>
+        {hole.active ? 'Active' : 'Inactive'}
+      </button>
+      <button onClick={onDelete} className="text-gray-700 hover:text-red-400 text-xl leading-none transition-colors">×</button>
     </div>
   )
 }

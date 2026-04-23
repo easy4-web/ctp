@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 export default function TDLogin() {
   const [password, setPassword] = useState('')
@@ -13,13 +14,11 @@ export default function TDLogin() {
     e.preventDefault()
     setError('')
     setLoading(true)
-
     const res = await fetch('/api/td/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),
     })
-
     if (res.ok) {
       router.push('/td/dashboard')
     } else {
@@ -29,25 +28,31 @@ export default function TDLogin() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-6">
+    <div className="flex flex-col items-center justify-center min-h-screen p-6" style={{ background: '#0f0f0f' }}>
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold mb-2">Tournament Director</h1>
-        <p className="text-gray-400 text-sm mb-8">Enter your password to continue.</p>
-
+        <div className="flex justify-center mb-10">
+          <Image src="/easy4-logo-white.png" alt="Easy4" width={120} height={45} className="object-contain" />
+        </div>
+        <h1 className="text-xl font-bold mb-1">Tournament Director</h1>
+        <p className="text-gray-500 text-sm mb-8">Enter your password to continue.</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             placeholder="Password"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
             autoFocus
+            className="w-full rounded-xl px-4 py-3 text-white placeholder-gray-600 outline-none transition-all"
+            style={{ background: '#191919', border: '1px solid #2a2a2a' }}
+            onFocus={e => e.target.style.borderColor = '#F5A423'}
+            onBlur={e => e.target.style.borderColor = '#2a2a2a'}
           />
           {error && <p className="text-red-400 text-sm">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-lg font-semibold transition-colors"
+            className="w-full py-3.5 rounded-xl font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
+            style={{ background: '#F5A423' }}
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>

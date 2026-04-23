@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase, CtpHole } from '@/lib/supabase'
+import { CtpHole } from '@/lib/supabase'
+import Image from 'next/image'
 import Link from 'next/link'
 
 function getDeviceId(): string {
@@ -31,29 +32,26 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
   const [distance, setDistance] = useState('')
 
   useEffect(() => {
-    params.then(({ id }) => {
+    params.then(async ({ id }) => {
       setTournamentId(id)
-      supabase.from('tournaments').select('id,name,date').eq('id', id).single().then(({ data }) => {
+      const res = await fetch(`/api/tournaments/${id}`)
+      if (res.ok) {
+        const data = await res.json()
         setTournament(data)
-      })
-      supabase.from('ctp_holes').select('*').eq('tournament_id', id).eq('active', true)
-        .order('hole_number').then(({ data }) => {
-          setHoles(data ?? [])
-          setLoading(false)
-        })
+        setHoles((data.ctp_holes ?? []).filter((h: CtpHole) => h.active).sort((a: CtpHole, b: CtpHole) => a.hole_number - b.hole_number))
+      }
+      setLoading(false)
     })
   }, [params])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-
     const dist = parseFloat(distance)
     if (!holeId || !playerName.trim() || !gender || isNaN(dist) || dist <= 0) {
       setError('Please fill in all fields correctly.')
       return
     }
-
     setSubmitting(true)
     const res = await fetch('/api/submissions', {
       method: 'POST',
@@ -67,7 +65,6 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
         device_id: getDeviceId(),
       }),
     })
-
     if (res.ok) {
       setSuccess(true)
       setDistance('')
@@ -79,94 +76,112 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
     setSubmitting(false)
   }
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-400">Loading...</div>
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen text-gray-500">Loading...</div>
+  }
 
   return (
-    <div className="min-h-screen p-6 max-w-md mx-auto">
-      <div className="mb-8">
-        <Link href={`/t/${tournamentId}`} className="text-gray-400 hover:text-white text-sm">← Back to dashboard</Link>
-        <h1 className="text-2xl font-bold mt-3">{tournament?.name}</h1>
-        <p className="text-gray-400 text-sm mt-1">Submit your closest throw</p>
-      </div>
+    <div className="min-h-screen" style={{ background: '#0f0f0f' }}>
+      <header className="border-b px-6 py-4 flex items-center gap-4" style={{ borderColor: '#2a2a2a' }}>
+        <Image src="/easy4-logo-white.png" alt="Easy4" width={80} height={30} className="object-contain" />
+        <div className="w-px h-6 bg-gray-700" />
+        <Link href={`/t/${tournamentId}`} className="text-gray-400 hover:text-white text-sm transition-colors">
+          ← {tournament?.name ?? 'Back'}
+        </Link>
+      </header>
 
-      {success && (
-        <div className="mb-6 bg-green-900/40 border border-green-700 rounded-lg p-4 text-green-300">
-          Throw recorded! Submit another or{' '}
-          <Link href={`/t/${tournamentId}`} className="underline">view the dashboard</Link>.
-        </div>
-      )}
+      <main className="p-6 max-w-md mx-auto">
+        <h1 className="text-2xl font-bold mt-2 mb-1">Submit your throw</h1>
+        <p className="text-gray-500 text-sm mb-8">Enter the distance from the basket.</p>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Your name</label>
-          <input
-            type="text"
-            value={playerName}
-            onChange={e => setPlayerName(e.target.value)}
-            placeholder="First and last name"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Category</label>
-          <div className="grid grid-cols-2 gap-3">
-            {(['M', 'F'] as const).map(g => (
-              <button
-                key={g}
-                type="button"
-                onClick={() => setGender(g)}
-                className={`py-3 rounded-lg font-semibold border transition-colors ${
-                  gender === g
-                    ? 'bg-green-600 border-green-500 text-white'
-                    : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
-                }`}
-              >
-                {g === 'M' ? 'Men' : 'Women'}
-              </button>
-            ))}
+        {success && (
+          <div className="mb-6 rounded-xl p-4 border text-sm" style={{ background: 'rgba(245,164,35,0.1)', borderColor: 'rgba(245,164,35,0.3)', color: '#F5A423' }}>
+            Throw recorded!{' '}
+            <Link href={`/t/${tournamentId}`} className="underline font-semibold">View dashboard</Link>
+            {' '}or submit another below.
           </div>
-        </div>
+        )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Basket</label>
-          <select
-            value={holeId}
-            onChange={e => setHoleId(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-green-500"
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-2">Your name</label>
+            <input
+              type="text"
+              value={playerName}
+              onChange={e => setPlayerName(e.target.value)}
+              placeholder="First and last name"
+              className="w-full rounded-xl px-4 py-3 text-white placeholder-gray-600 outline-none focus:ring-2 transition-all"
+              style={{ background: '#191919', border: '1px solid #2a2a2a' }}
+              onFocus={e => e.target.style.borderColor = '#F5A423'}
+              onBlur={e => e.target.style.borderColor = '#2a2a2a'}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-2">Category</label>
+            <div className="grid grid-cols-2 gap-3">
+              {(['M', 'F'] as const).map(g => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGender(g)}
+                  className="py-3 rounded-xl font-semibold transition-all text-sm"
+                  style={gender === g
+                    ? { background: '#F5A423', color: '#000', border: '1px solid #F5A423' }
+                    : { background: '#191919', color: '#9ca3af', border: '1px solid #2a2a2a' }
+                  }
+                >
+                  {g === 'M' ? 'Men' : 'Women'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-2">Basket</label>
+            <select
+              value={holeId}
+              onChange={e => setHoleId(e.target.value)}
+              className="w-full rounded-xl px-4 py-3 text-white outline-none"
+              style={{ background: '#191919', border: '1px solid #2a2a2a' }}
+            >
+              <option value="">Select basket...</option>
+              {holes.map(h => (
+                <option key={h.id} value={h.id}>
+                  Basket {h.hole_number}{h.sponsor_name ? ` — ${h.sponsor_name}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-2">Distance (meters)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={distance}
+              onChange={e => setDistance(e.target.value)}
+              placeholder="e.g. 3.45"
+              className="w-full rounded-xl px-4 py-3 text-white placeholder-gray-600 outline-none transition-all"
+              style={{ background: '#191919', border: '1px solid #2a2a2a' }}
+              onFocus={e => e.target.style.borderColor = '#F5A423'}
+              onBlur={e => e.target.style.borderColor = '#2a2a2a'}
+            />
+          </div>
+
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full py-3.5 rounded-xl font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
+            style={{ background: '#F5A423' }}
           >
-            <option value="">Select basket...</option>
-            {holes.map(h => (
-              <option key={h.id} value={h.id}>
-                Basket {h.hole_number}{h.sponsor_name ? ` — ${h.sponsor_name}` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Distance (meters)</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            value={distance}
-            onChange={e => setDistance(e.target.value)}
-            placeholder="e.g. 3.45"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
-          />
-        </div>
-
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full py-3 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-lg font-semibold transition-colors"
-        >
-          {submitting ? 'Submitting...' : 'Submit throw'}
-        </button>
-      </form>
+            {submitting ? 'Submitting...' : 'Submit throw'}
+          </button>
+        </form>
+      </main>
     </div>
   )
 }
