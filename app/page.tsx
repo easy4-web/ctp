@@ -10,6 +10,7 @@ export default async function Home() {
     .from('tournaments')
     .select('*')
     .eq('active', true)
+    .eq('archived', false)
     .order('date', { ascending: false })
 
   return (
