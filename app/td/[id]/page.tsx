@@ -107,6 +107,11 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
         <div className="flex items-start justify-between mt-2 mb-6">
           <div>
             <h1 className="text-2xl font-bold">{tournament.name}</h1>
+            <Link href={`/td/${tournamentId}/entries`}
+              className="text-xs font-medium mt-1 inline-block transition-colors hover:opacity-80"
+              style={{ color: '#F5A423' }}>
+              View all entries →
+            </Link>
             <p className="text-gray-500 text-sm mt-1">{new Date(tournament.date).toLocaleDateString('et-EE')}</p>
           </div>
           <button onClick={toggleTournamentActive}
