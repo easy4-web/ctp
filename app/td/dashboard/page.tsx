@@ -1,5 +1,6 @@
 import { requireTD } from '@/lib/session'
-import { supabaseAdmin, Tournament } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
+import { Tournament } from '@/lib/supabase'
 import Link from 'next/link'
 import LogoutButton from '@/components/LogoutButton'
 
