@@ -47,7 +47,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    const dist = parseFloat(distance)
+    const dist = parseFloat(distance.replace(',', '.'))
     if (!holeId || !playerName.trim() || !gender || isNaN(dist) || dist <= 0) {
       setError('Please fill in all fields correctly.')
       return
