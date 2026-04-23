@@ -15,6 +15,7 @@ type Tournament = {
   name: string
   date: string
   active: boolean
+  archived: boolean
   ctp_holes: CtpHole[]
 }
 
@@ -74,10 +75,14 @@ export default function TournamentDashboard({ params }: { params: Promise<{ id: 
     )
   }
 
-  if (!tournament) {
+  if (!tournament || !tournament.active || tournament.archived) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">Tournament not found.</div>
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4" style={{ background: '#0f0f0f' }}>
+        <Image src="/easy4-logo-white.png" alt="Easy4" width={100} height={38} className="object-contain opacity-50" />
+        <p className="text-gray-500">This tournament is not currently active.</p>
+        <Link href="/" className="text-sm font-medium transition-colors hover:opacity-80" style={{ color: '#F5A423' }}>
+          View all tournaments
+        </Link>
       </div>
     )
   }
