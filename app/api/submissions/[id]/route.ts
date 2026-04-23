@@ -8,7 +8,6 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
 
   const { id } = await params
 
-  // Get hole_id + gender before deleting so we can recalculate leader
   const { data: sub } = await supabaseAdmin
     .from('submissions')
     .select('hole_id, gender')
@@ -17,10 +16,18 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
 
   if (!sub) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+  // Remove any leader row referencing this submission before deleting it
+  await supabaseAdmin
+    .from('leaders')
+    .delete()
+    .eq('hole_id', sub.hole_id)
+    .eq('gender', sub.gender)
+    .eq('submission_id', id)
+
   const { error } = await supabaseAdmin.from('submissions').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Recalculate leader for this hole + gender
+  // Recalculate leader from remaining submissions
   const { data: best } = await supabaseAdmin
     .from('submissions')
     .select('id, player_name, distance_m')
@@ -39,12 +46,6 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
       submission_id: best.id,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'hole_id,gender' })
-  } else {
-    // No submissions left for this hole+gender — remove leader entry
-    await supabaseAdmin.from('leaders')
-      .delete()
-      .eq('hole_id', sub.hole_id)
-      .eq('gender', sub.gender)
   }
 
   return NextResponse.json({ ok: true })
