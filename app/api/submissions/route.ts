@@ -34,10 +34,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('submissions')
-    .upsert(
-      { tournament_id, hole_id, player_name, gender, distance_m, device_id },
-      { onConflict: 'hole_id,gender,device_id' }
-    )
+    .insert({ tournament_id, hole_id, player_name, gender, distance_m, device_id })
     .select()
     .single()
 
