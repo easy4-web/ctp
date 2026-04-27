@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 type Tournament = { id: string; name: string; date: string; active: boolean; archived: boolean }
-type Hole = { id: string; hole_number: number; sponsor_name: string | null; active: boolean }
+type Hole = { id: string; hole_number: number; sponsor_name: string | null; active: boolean; gender_split: boolean }
 
 export default function ManageTournament({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -66,6 +66,16 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
       body: JSON.stringify({ active: !hole.active }),
     })
     if (res.ok) setHoles(holes.map(h => h.id === hole.id ? { ...h, active: !h.active } : h))
+    setSaving(null)
+  }
+
+  async function toggleGenderSplit(hole: Hole) {
+    setSaving(hole.id)
+    const res = await fetch(`/api/holes/${hole.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gender_split: !hole.gender_split }),
+    })
+    if (res.ok) setHoles(holes.map(h => h.id === hole.id ? { ...h, gender_split: !h.gender_split } : h))
     setSaving(null)
   }
 
@@ -193,6 +203,7 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
           {holes.map(hole => (
             <HoleRow key={hole.id} hole={hole} saving={saving === hole.id} readonly={isArchived}
               onToggle={() => toggleHole(hole)}
+              onGenderSplitToggle={() => toggleGenderSplit(hole)}
               onSponsorSave={s => updateSponsor(hole, s)}
               onDelete={() => deleteHole(hole.id)} />
           ))}
@@ -225,20 +236,20 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
   )
 }
 
-function HoleRow({ hole, saving, readonly, onToggle, onSponsorSave, onDelete }: {
+function HoleRow({ hole, saving, readonly, onToggle, onGenderSplitToggle, onSponsorSave, onDelete }: {
   hole: Hole; saving: boolean; readonly: boolean
-  onToggle: () => void; onSponsorSave: (s: string) => void; onDelete: () => void
+  onToggle: () => void; onGenderSplitToggle: () => void; onSponsorSave: (s: string) => void; onDelete: () => void
 }) {
   const [editing, setEditing] = useState(false)
   const [sponsor, setSponsor] = useState(hole.sponsor_name ?? '')
 
   return (
-    <div className="rounded-2xl px-4 py-3 border flex items-center gap-4"
+    <div className="rounded-2xl px-4 py-3 border flex items-center gap-3"
       style={{ background: '#191919', borderColor: '#2a2a2a', opacity: hole.active ? 1 : 0.5 }}>
-      <span className="text-xl font-black w-10 text-center" style={{ color: '#F5A423' }}>
+      <span className="text-xl font-black w-10 text-center shrink-0" style={{ color: '#F5A423' }}>
         {hole.hole_number}
       </span>
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         {!readonly && editing ? (
           <div className="flex gap-2">
             <input autoFocus type="text" value={sponsor} onChange={e => setSponsor(e.target.value)}
@@ -249,7 +260,7 @@ function HoleRow({ hole, saving, readonly, onToggle, onSponsorSave, onDelete }: 
             <button onClick={() => setEditing(false)} className="text-xs text-gray-600 hover:text-gray-400">Cancel</button>
           </div>
         ) : (
-          <button onClick={() => !readonly && setEditing(true)} className="text-sm text-left" disabled={readonly}>
+          <button onClick={() => !readonly && setEditing(true)} className="text-sm text-left truncate max-w-full" disabled={readonly}>
             {hole.sponsor_name
               ? <span style={{ color: '#F5A423' }}>{hole.sponsor_name}</span>
               : <span className="text-gray-600 italic">No sponsor</span>}
@@ -259,14 +270,21 @@ function HoleRow({ hole, saving, readonly, onToggle, onSponsorSave, onDelete }: 
       </div>
       {!readonly && (
         <>
+          <button onClick={onGenderSplitToggle} disabled={saving}
+            className="text-xs px-3 py-1.5 rounded-full font-semibold transition-colors shrink-0"
+            style={hole.gender_split
+              ? { background: 'rgba(99,102,241,0.15)', color: '#818cf8' }
+              : { background: 'rgba(52,211,153,0.15)', color: '#34d399' }}>
+            {hole.gender_split ? 'Gendered' : 'Open'}
+          </button>
           <button onClick={onToggle} disabled={saving}
-            className="text-xs px-3 py-1.5 rounded-full font-semibold transition-colors"
+            className="text-xs px-3 py-1.5 rounded-full font-semibold transition-colors shrink-0"
             style={hole.active
               ? { background: 'rgba(245,164,35,0.15)', color: '#F5A423' }
               : { background: '#2a2a2a', color: '#6b7280' }}>
             {hole.active ? 'Active' : 'Inactive'}
           </button>
-          <button onClick={onDelete} className="text-gray-700 hover:text-red-400 text-xl leading-none transition-colors">×</button>
+          <button onClick={onDelete} className="text-gray-700 hover:text-red-400 text-xl leading-none transition-colors shrink-0">×</button>
         </>
       )}
     </div>

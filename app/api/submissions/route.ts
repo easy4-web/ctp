@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   if (!tournament_id || !hole_id || !player_name || !gender || distance_m == null || !device_id) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
-  if (!['M', 'F'].includes(gender)) {
+  if (!['M', 'F', 'O'].includes(gender)) {
     return NextResponse.json({ error: 'Invalid gender' }, { status: 400 })
   }
   if (distance_m <= 0) {

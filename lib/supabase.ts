@@ -20,6 +20,7 @@ export type CtpHole = {
   hole_number: number
   sponsor_name: string | null
   active: boolean
+  gender_split: boolean   // true = separate Men/Women, false = Open (no category)
   created_at: string
 }
 
@@ -28,7 +29,7 @@ export type Submission = {
   tournament_id: string
   hole_id: string
   player_name: string
-  gender: 'M' | 'F'
+  gender: 'M' | 'F' | 'O'  // O = Open (no category)
   distance_m: number
   device_id: string
   created_at: string
@@ -36,7 +37,7 @@ export type Submission = {
 
 export type Leader = {
   hole_id: string
-  gender: 'M' | 'F'
+  gender: 'M' | 'F' | 'O'  // O = Open
   player_name: string
   distance_m: number
   submission_id: string

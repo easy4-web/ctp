@@ -8,6 +8,7 @@ import Link from 'next/link'
 type HoleWithLeaders = CtpHole & {
   leader_M: Leader | null
   leader_F: Leader | null
+  leader_O: Leader | null
 }
 
 type Tournament = {
@@ -45,6 +46,7 @@ export default function TournamentDashboard({ params }: { params: Promise<{ id: 
       ...h,
       leader_M: leaders.find(l => l.hole_id === h.id && l.gender === 'M') ?? null,
       leader_F: leaders.find(l => l.hole_id === h.id && l.gender === 'F') ?? null,
+      leader_O: leaders.find(l => l.hole_id === h.id && l.gender === 'O') ?? null,
     })))
     setLoading(false)
   }, [])
@@ -130,8 +132,14 @@ export default function TournamentDashboard({ params }: { params: Promise<{ id: 
                   )}
                 </div>
                 <div className="space-y-2">
-                  <LeaderRow label="Men" leader={hole.leader_M} />
-                  <LeaderRow label="Women" leader={hole.leader_F} />
+                  {hole.gender_split === false ? (
+                    <LeaderRow label="Open" leader={hole.leader_O} />
+                  ) : (
+                    <>
+                      <LeaderRow label="Men" leader={hole.leader_M} />
+                      <LeaderRow label="Women" leader={hole.leader_F} />
+                    </>
+                  )}
                 </div>
               </div>
             ))}

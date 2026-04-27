@@ -7,7 +7,7 @@ import Link from 'next/link'
 type Submission = {
   id: string
   player_name: string
-  gender: 'M' | 'F'
+  gender: 'M' | 'F' | 'O'
   distance_m: number
   device_id: string
   created_at: string
@@ -68,7 +68,7 @@ export default function EntriesPage({ params }: { params: Promise<{ id: string }
   }, {})
 
   // Best distance per hole+gender among all submissions
-  function getBest(subs: Submission[], gender: 'M' | 'F') {
+  function getBest(subs: Submission[], gender: 'M' | 'F' | 'O') {
     return subs.filter(s => s.gender === gender).reduce((min, s) =>
       s.distance_m < min ? s.distance_m : min, Infinity)
   }
@@ -171,7 +171,7 @@ export default function EntriesPage({ params }: { params: Promise<{ id: string }
                                       {s.player_name}
                                     </span>
                                   </td>
-                                  <td className="px-4 py-3 text-gray-400">{s.gender === 'M' ? 'Men' : 'Women'}</td>
+                                  <td className="px-4 py-3 text-gray-400">{s.gender === 'M' ? 'Men' : s.gender === 'F' ? 'Women' : 'Open'}</td>
                                   <td className="px-4 py-3 text-right font-bold" style={{ color: isLeader ? '#F5A423' : '#f0f0f0' }}>
                                     {Number(s.distance_m).toFixed(2)} m
                                   </td>

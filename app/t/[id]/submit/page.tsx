@@ -31,6 +31,9 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
   const [gender, setGender] = useState<'M' | 'F' | ''>('')
   const [distance, setDistance] = useState('')
 
+  const selectedHole = holes.find(h => h.id === holeId)
+  const isGendered = !selectedHole || selectedHole.gender_split !== false
+
   useEffect(() => {
     params.then(async ({ id }) => {
       setTournamentId(id)
@@ -48,7 +51,8 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
     e.preventDefault()
     setError('')
     const dist = parseFloat(distance.replace(',', '.'))
-    if (!holeId || !playerName.trim() || !gender || isNaN(dist) || dist <= 0) {
+    const effectiveGender = isGendered ? gender : 'O'
+    if (!holeId || !playerName.trim() || (isGendered && !gender) || isNaN(dist) || dist <= 0) {
       setError('Please fill in all fields correctly.')
       return
     }
@@ -60,7 +64,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
         tournament_id: tournamentId,
         hole_id: holeId,
         player_name: playerName.trim(),
-        gender,
+        gender: effectiveGender,
         distance_m: dist,
         device_id: getDeviceId(),
       }),
@@ -118,30 +122,10 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">Category</label>
-            <div className="grid grid-cols-2 gap-3">
-              {(['M', 'F'] as const).map(g => (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => setGender(g)}
-                  className="py-3 rounded-xl font-semibold transition-all text-sm"
-                  style={gender === g
-                    ? { background: '#F5A423', color: '#000', border: '1px solid #F5A423' }
-                    : { background: '#191919', color: '#9ca3af', border: '1px solid #2a2a2a' }
-                  }
-                >
-                  {g === 'M' ? 'Men' : 'Women'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">Basket</label>
             <select
               value={holeId}
-              onChange={e => setHoleId(e.target.value)}
+              onChange={e => { setHoleId(e.target.value); setGender('') }}
               className="w-full rounded-xl px-4 py-3 text-white outline-none"
               style={{ background: '#191919', border: '1px solid #2a2a2a' }}
             >
@@ -153,6 +137,28 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
               ))}
             </select>
           </div>
+
+          {isGendered && (
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">Category</label>
+              <div className="grid grid-cols-2 gap-3">
+                {(['M', 'F'] as const).map(g => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setGender(g)}
+                    className="py-3 rounded-xl font-semibold transition-all text-sm"
+                    style={gender === g
+                      ? { background: '#F5A423', color: '#000', border: '1px solid #F5A423' }
+                      : { background: '#191919', color: '#9ca3af', border: '1px solid #2a2a2a' }
+                    }
+                  >
+                    {g === 'M' ? 'Men' : 'Women'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">Distance (meters)</label>
