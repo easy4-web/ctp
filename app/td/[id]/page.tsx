@@ -14,7 +14,7 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [holes, setHoles] = useState<Hole[]>([])
   const [loading, setLoading] = useState(true)
-  const [newHole, setNewHole] = useState({ hole_number: '', sponsor_name: '' })
+  const [newHole, setNewHole] = useState({ hole_number: '', sponsor_name: '', gender_split: true })
   const [adding, setAdding] = useState(false)
   const [saving, setSaving] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -69,16 +69,6 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
     setSaving(null)
   }
 
-  async function toggleGenderSplit(hole: Hole) {
-    setSaving(hole.id)
-    const res = await fetch(`/api/holes/${hole.id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gender_split: !hole.gender_split }),
-    })
-    if (res.ok) setHoles(holes.map(h => h.id === hole.id ? { ...h, gender_split: !h.gender_split } : h))
-    setSaving(null)
-  }
-
   async function updateSponsor(hole: Hole, sponsor: string) {
     setSaving(hole.id)
     const res = await fetch(`/api/holes/${hole.id}`, {
@@ -101,12 +91,17 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
     setAdding(true)
     const res = await fetch('/api/holes', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tournament_id: tournamentId, hole_number: num, sponsor_name: newHole.sponsor_name.trim() || null }),
+      body: JSON.stringify({
+        tournament_id: tournamentId,
+        hole_number: num,
+        sponsor_name: newHole.sponsor_name.trim() || null,
+        gender_split: newHole.gender_split,
+      }),
     })
     if (res.ok) {
       const hole = await res.json()
       setHoles([...holes, hole].sort((a, b) => a.hole_number - b.hole_number))
-      setNewHole({ hole_number: '', sponsor_name: '' })
+      setNewHole({ hole_number: '', sponsor_name: '', gender_split: true })
     }
     setAdding(false)
   }
@@ -203,7 +198,6 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
           {holes.map(hole => (
             <HoleRow key={hole.id} hole={hole} saving={saving === hole.id} readonly={isArchived}
               onToggle={() => toggleHole(hole)}
-              onGenderSplitToggle={() => toggleGenderSplit(hole)}
               onSponsorSave={s => updateSponsor(hole, s)}
               onDelete={() => deleteHole(hole.id)} />
           ))}
@@ -212,7 +206,7 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
         {!isArchived && (
           <form onSubmit={addHole} className="rounded-2xl p-4 border" style={{ background: '#191919', borderColor: '#2a2a2a' }}>
             <p className="text-sm font-medium text-gray-400 mb-3">Add basket</p>
-            <div className="flex gap-3">
+            <div className="flex gap-3 mb-3">
               <input type="number" min="1" max="99" value={newHole.hole_number}
                 onChange={e => setNewHole({ ...newHole, hole_number: e.target.value })}
                 placeholder="#"
@@ -223,6 +217,20 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
                 placeholder="Sponsor (optional)"
                 className="flex-1 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 outline-none"
                 style={inputStyle} />
+            </div>
+            <div className="flex gap-3 items-center">
+              <div className="flex rounded-xl overflow-hidden flex-1" style={{ border: '1px solid #2a2a2a' }}>
+                {[true, false].map(gs => (
+                  <button key={String(gs)} type="button"
+                    onClick={() => setNewHole({ ...newHole, gender_split: gs })}
+                    className="flex-1 py-2 text-sm font-medium transition-colors"
+                    style={newHole.gender_split === gs
+                      ? { background: '#F5A423', color: '#000' }
+                      : { background: '#111', color: '#6b7280' }}>
+                    {gs ? 'Gendered' : 'Open'}
+                  </button>
+                ))}
+              </div>
               <button type="submit" disabled={adding}
                 className="px-5 py-2 rounded-xl text-sm font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
                 style={{ background: '#F5A423' }}>
@@ -236,9 +244,9 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
   )
 }
 
-function HoleRow({ hole, saving, readonly, onToggle, onGenderSplitToggle, onSponsorSave, onDelete }: {
+function HoleRow({ hole, saving, readonly, onToggle, onSponsorSave, onDelete }: {
   hole: Hole; saving: boolean; readonly: boolean
-  onToggle: () => void; onGenderSplitToggle: () => void; onSponsorSave: (s: string) => void; onDelete: () => void
+  onToggle: () => void; onSponsorSave: (s: string) => void; onDelete: () => void
 }) {
   const [editing, setEditing] = useState(false)
   const [sponsor, setSponsor] = useState(hole.sponsor_name ?? '')
@@ -268,15 +276,14 @@ function HoleRow({ hole, saving, readonly, onToggle, onGenderSplitToggle, onSpon
           </button>
         )}
       </div>
+      <span className="text-xs px-2.5 py-1 rounded-full font-medium shrink-0"
+        style={hole.gender_split
+          ? { background: 'rgba(99,102,241,0.12)', color: '#818cf8' }
+          : { background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>
+        {hole.gender_split ? 'Gendered' : 'Open'}
+      </span>
       {!readonly && (
         <>
-          <button onClick={onGenderSplitToggle} disabled={saving}
-            className="text-xs px-3 py-1.5 rounded-full font-semibold transition-colors shrink-0"
-            style={hole.gender_split
-              ? { background: 'rgba(99,102,241,0.15)', color: '#818cf8' }
-              : { background: 'rgba(52,211,153,0.15)', color: '#34d399' }}>
-            {hole.gender_split ? 'Gendered' : 'Open'}
-          </button>
           <button onClick={onToggle} disabled={saving}
             className="text-xs px-3 py-1.5 rounded-full font-semibold transition-colors shrink-0"
             style={hole.active

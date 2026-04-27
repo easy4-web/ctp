@@ -5,19 +5,19 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 
-type HoleDraft = { hole_number: number; sponsor_name: string }
+type HoleDraft = { hole_number: number; sponsor_name: string; gender_split: boolean }
 
 export default function NewTournament() {
   const router = useRouter()
   const [name, setName] = useState('')
   const [date, setDate] = useState('')
-  const [holes, setHoles] = useState<HoleDraft[]>([{ hole_number: 1, sponsor_name: '' }])
+  const [holes, setHoles] = useState<HoleDraft[]>([{ hole_number: 1, sponsor_name: '', gender_split: true }])
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
   function addHole() {
     const next = Math.max(...holes.map(h => h.hole_number), 0) + 1
-    setHoles([...holes, { hole_number: next, sponsor_name: '' }])
+    setHoles([...holes, { hole_number: next, sponsor_name: '', gender_split: true }])
   }
 
   function removeHole(index: number) {
@@ -49,7 +49,7 @@ export default function NewTournament() {
       fetch('/api/holes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournament_id: tournament.id, hole_number: h.hole_number, sponsor_name: h.sponsor_name.trim() || null }),
+        body: JSON.stringify({ tournament_id: tournament.id, hole_number: h.hole_number, sponsor_name: h.sponsor_name.trim() || null, gender_split: h.gender_split }),
       })
     ))
     router.push(`/td/${tournament.id}`)
@@ -96,19 +96,33 @@ export default function NewTournament() {
             </div>
             <div className="space-y-2">
               {holes.map((h, i) => (
-                <div key={i} className="flex gap-3 items-center">
-                  <input type="number" min="1" max="99" value={h.hole_number}
-                    onChange={e => updateHole(i, 'hole_number', parseInt(e.target.value))}
-                    placeholder="#"
-                    className="w-20 rounded-xl px-3 py-2.5 text-white text-sm outline-none text-center"
-                    style={inputStyle} />
-                  <input type="text" value={h.sponsor_name}
-                    onChange={e => updateHole(i, 'sponsor_name', e.target.value)}
-                    placeholder="Sponsor name (optional)"
-                    className="flex-1 rounded-xl px-3 py-2.5 text-white text-sm placeholder-gray-600 outline-none"
-                    style={inputStyle} />
-                  <button type="button" onClick={() => removeHole(i)}
-                    className="text-gray-600 hover:text-red-400 text-xl leading-none px-1 transition-colors">×</button>
+                <div key={i} className="rounded-xl p-3 border" style={{ background: '#111', borderColor: '#2a2a2a' }}>
+                  <div className="flex gap-3 items-center mb-2">
+                    <input type="number" min="1" max="99" value={h.hole_number}
+                      onChange={e => updateHole(i, 'hole_number', parseInt(e.target.value))}
+                      placeholder="#"
+                      className="w-20 rounded-lg px-3 py-2 text-white text-sm outline-none text-center"
+                      style={inputStyle} />
+                    <input type="text" value={h.sponsor_name}
+                      onChange={e => updateHole(i, 'sponsor_name', e.target.value)}
+                      placeholder="Sponsor name (optional)"
+                      className="flex-1 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 outline-none"
+                      style={inputStyle} />
+                    <button type="button" onClick={() => removeHole(i)}
+                      className="text-gray-600 hover:text-red-400 text-xl leading-none px-1 transition-colors shrink-0">×</button>
+                  </div>
+                  <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid #2a2a2a' }}>
+                    {([true, false] as const).map(gs => (
+                      <button key={String(gs)} type="button"
+                        onClick={() => updateHole(i, 'gender_split', gs)}
+                        className="flex-1 py-1.5 text-xs font-medium transition-colors"
+                        style={h.gender_split === gs
+                          ? { background: '#F5A423', color: '#000' }
+                          : { background: '#191919', color: '#6b7280' }}>
+                        {gs ? 'Gendered (Men / Women)' : 'Open (no category)'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
