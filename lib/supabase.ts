@@ -14,13 +14,15 @@ export type Tournament = {
   created_at: string
 }
 
+export type CategoryMode = 'gendered' | 'open' | 'men_only' | 'women_only'
+
 export type CtpHole = {
   id: string
   tournament_id: string
   hole_number: number
   sponsor_name: string | null
   active: boolean
-  gender_split: boolean   // true = separate Men/Women, false = Open (no category)
+  category_mode: CategoryMode
   created_at: string
 }
 

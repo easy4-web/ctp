@@ -4,9 +4,17 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { CategoryMode } from '@/lib/supabase'
 
 type Tournament = { id: string; name: string; date: string; active: boolean; archived: boolean }
-type Hole = { id: string; hole_number: number; sponsor_name: string | null; active: boolean; gender_split: boolean }
+type Hole = { id: string; hole_number: number; sponsor_name: string | null; active: boolean; category_mode: CategoryMode }
+
+const CATEGORY_OPTIONS: { value: CategoryMode; label: string }[] = [
+  { value: 'gendered', label: 'Men + Women' },
+  { value: 'open',     label: 'Open' },
+  { value: 'men_only', label: 'Men only' },
+  { value: 'women_only', label: 'Women only' },
+]
 
 export default function ManageTournament({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -14,7 +22,7 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [holes, setHoles] = useState<Hole[]>([])
   const [loading, setLoading] = useState(true)
-  const [newHole, setNewHole] = useState({ hole_number: '', sponsor_name: '', gender_split: true })
+  const [newHole, setNewHole] = useState({ hole_number: '', sponsor_name: '', category_mode: 'gendered' as CategoryMode })
   const [adding, setAdding] = useState(false)
   const [saving, setSaving] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -69,13 +77,13 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
     setSaving(null)
   }
 
-  async function toggleGenderSplit(hole: Hole) {
+  async function updateCategoryMode(hole: Hole, mode: CategoryMode) {
     setSaving(hole.id)
     const res = await fetch(`/api/holes/${hole.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gender_split: !hole.gender_split }),
+      body: JSON.stringify({ category_mode: mode }),
     })
-    if (res.ok) setHoles(holes.map(h => h.id === hole.id ? { ...h, gender_split: !h.gender_split } : h))
+    if (res.ok) setHoles(holes.map(h => h.id === hole.id ? { ...h, category_mode: mode } : h))
     setSaving(null)
   }
 
@@ -105,13 +113,13 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
         tournament_id: tournamentId,
         hole_number: num,
         sponsor_name: newHole.sponsor_name.trim() || null,
-        gender_split: newHole.gender_split,
+        category_mode: newHole.category_mode,
       }),
     })
     if (res.ok) {
       const hole = await res.json()
       setHoles([...holes, hole].sort((a, b) => a.hole_number - b.hole_number))
-      setNewHole({ hole_number: '', sponsor_name: '', gender_split: true })
+      setNewHole({ hole_number: '', sponsor_name: '', category_mode: 'gendered' })
     }
     setAdding(false)
   }
@@ -208,7 +216,7 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
           {holes.map(hole => (
             <HoleRow key={hole.id} hole={hole} saving={saving === hole.id} readonly={isArchived}
               onToggle={() => toggleHole(hole)}
-              onGenderSplitToggle={() => toggleGenderSplit(hole)}
+              onCategoryChange={mode => updateCategoryMode(hole, mode)}
               onSponsorSave={s => updateSponsor(hole, s)}
               onDelete={() => deleteHole(hole.id)} />
           ))}
@@ -229,25 +237,23 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
                 className="flex-1 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 outline-none"
                 style={inputStyle} />
             </div>
-            <div className="flex gap-3 items-center">
-              <div className="flex rounded-xl overflow-hidden flex-1" style={{ border: '1px solid #2a2a2a' }}>
-                {[true, false].map(gs => (
-                  <button key={String(gs)} type="button"
-                    onClick={() => setNewHole({ ...newHole, gender_split: gs })}
-                    className="flex-1 py-2 text-sm font-medium transition-colors"
-                    style={newHole.gender_split === gs
-                      ? { background: '#F5A423', color: '#000' }
-                      : { background: '#111', color: '#6b7280' }}>
-                    {gs ? 'Gendered' : 'Open'}
-                  </button>
-                ))}
-              </div>
-              <button type="submit" disabled={adding}
-                className="px-5 py-2 rounded-xl text-sm font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
-                style={{ background: '#F5A423' }}>
-                Add
-              </button>
+            <div className="grid grid-cols-4 gap-2 mb-3">
+              {CATEGORY_OPTIONS.map(opt => (
+                <button key={opt.value} type="button"
+                  onClick={() => setNewHole({ ...newHole, category_mode: opt.value })}
+                  className="py-2 px-1 rounded-xl text-xs font-medium transition-colors text-center"
+                  style={newHole.category_mode === opt.value
+                    ? { background: '#F5A423', color: '#000' }
+                    : { background: '#111', color: '#6b7280', border: '1px solid #2a2a2a' }}>
+                  {opt.label}
+                </button>
+              ))}
             </div>
+            <button type="submit" disabled={adding}
+              className="w-full py-2 rounded-xl text-sm font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-40"
+              style={{ background: '#F5A423' }}>
+              Add basket
+            </button>
           </form>
         )}
       </main>
@@ -255,65 +261,78 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
   )
 }
 
-function HoleRow({ hole, saving, readonly, onToggle, onGenderSplitToggle, onSponsorSave, onDelete }: {
+function categoryLabel(mode: CategoryMode) {
+  return CATEGORY_OPTIONS.find(o => o.value === mode)?.label ?? mode
+}
+
+function HoleRow({ hole, saving, readonly, onToggle, onCategoryChange, onSponsorSave, onDelete }: {
   hole: Hole; saving: boolean; readonly: boolean
-  onToggle: () => void; onGenderSplitToggle: () => void; onSponsorSave: (s: string) => void; onDelete: () => void
+  onToggle: () => void
+  onCategoryChange: (mode: CategoryMode) => void
+  onSponsorSave: (s: string) => void
+  onDelete: () => void
 }) {
   const [editing, setEditing] = useState(false)
   const [sponsor, setSponsor] = useState(hole.sponsor_name ?? '')
 
   return (
-    <div className="rounded-2xl px-4 py-3 border flex items-center gap-3"
-      style={{ background: '#191919', borderColor: '#2a2a2a', opacity: hole.active ? 1 : 0.5 }}>
-      <span className="text-xl font-black w-10 text-center shrink-0" style={{ color: '#F5A423' }}>
-        {hole.hole_number}
-      </span>
-      <div className="flex-1 min-w-0">
-        {!readonly && editing ? (
-          <div className="flex gap-2">
-            <input autoFocus type="text" value={sponsor} onChange={e => setSponsor(e.target.value)}
-              className="flex-1 rounded-lg px-2 py-1 text-sm text-white outline-none"
-              style={{ background: '#111', border: '1px solid #3a3a3a' }} />
-            <button onClick={() => { onSponsorSave(sponsor); setEditing(false) }}
-              disabled={saving} className="text-xs font-semibold" style={{ color: '#F5A423' }}>Save</button>
-            <button onClick={() => setEditing(false)} className="text-xs text-gray-600 hover:text-gray-400">Cancel</button>
-          </div>
+    <div className="rounded-2xl border" style={{ background: '#191919', borderColor: '#2a2a2a', opacity: hole.active ? 1 : 0.6 }}>
+      <div className="px-4 py-3 flex items-center gap-3">
+        <span className="text-xl font-black w-10 text-center shrink-0" style={{ color: '#F5A423' }}>
+          {hole.hole_number}
+        </span>
+        <div className="flex-1 min-w-0">
+          {!readonly && editing ? (
+            <div className="flex gap-2">
+              <input autoFocus type="text" value={sponsor} onChange={e => setSponsor(e.target.value)}
+                className="flex-1 rounded-lg px-2 py-1 text-sm text-white outline-none"
+                style={{ background: '#111', border: '1px solid #3a3a3a' }} />
+              <button onClick={() => { onSponsorSave(sponsor); setEditing(false) }}
+                disabled={saving} className="text-xs font-semibold" style={{ color: '#F5A423' }}>Save</button>
+              <button onClick={() => setEditing(false)} className="text-xs text-gray-600 hover:text-gray-400">Cancel</button>
+            </div>
+          ) : (
+            <button onClick={() => !readonly && setEditing(true)} className="text-sm text-left truncate max-w-full" disabled={readonly}>
+              {hole.sponsor_name
+                ? <span style={{ color: '#F5A423' }}>{hole.sponsor_name}</span>
+                : <span className="text-gray-600 italic">No sponsor</span>}
+              {!readonly && <span className="text-gray-700 text-xs ml-2">(edit)</span>}
+            </button>
+          )}
+        </div>
+        {readonly ? (
+          <span className="text-xs px-2.5 py-1 rounded-full font-medium shrink-0"
+            style={{ background: '#2a2a2a', color: '#9ca3af' }}>
+            {categoryLabel(hole.category_mode)}
+          </span>
         ) : (
-          <button onClick={() => !readonly && setEditing(true)} className="text-sm text-left truncate max-w-full" disabled={readonly}>
-            {hole.sponsor_name
-              ? <span style={{ color: '#F5A423' }}>{hole.sponsor_name}</span>
-              : <span className="text-gray-600 italic">No sponsor</span>}
-            {!readonly && <span className="text-gray-700 text-xs ml-2">(edit)</span>}
-          </button>
+          <>
+            <button onClick={onToggle} disabled={saving}
+              className="text-xs px-3 py-1.5 rounded-full font-semibold transition-colors shrink-0"
+              style={hole.active
+                ? { background: 'rgba(245,164,35,0.15)', color: '#F5A423' }
+                : { background: '#2a2a2a', color: '#6b7280' }}>
+              {hole.active ? 'Active' : 'Inactive'}
+            </button>
+            <button onClick={onDelete} className="text-gray-700 hover:text-red-400 text-xl leading-none transition-colors shrink-0">×</button>
+          </>
         )}
       </div>
-      {readonly ? (
-        <span className="text-xs px-2.5 py-1 rounded-full font-medium shrink-0"
-          style={hole.gender_split
-            ? { background: 'rgba(99,102,241,0.12)', color: '#818cf8' }
-            : { background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>
-          {hole.gender_split ? 'Gendered' : 'Open'}
-        </span>
-      ) : (
-        <button onClick={onGenderSplitToggle} disabled={saving}
-          className="text-xs px-2.5 py-1 rounded-full font-semibold transition-colors shrink-0"
-          style={hole.gender_split
-            ? { background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }
-            : { background: 'rgba(52,211,153,0.15)', color: '#34d399', border: '1px solid rgba(52,211,153,0.3)' }}>
-          {hole.gender_split ? 'Gendered' : 'Open'}
-        </button>
-      )}
+
       {!readonly && (
-        <>
-          <button onClick={onToggle} disabled={saving}
-            className="text-xs px-3 py-1.5 rounded-full font-semibold transition-colors shrink-0"
-            style={hole.active
-              ? { background: 'rgba(245,164,35,0.15)', color: '#F5A423' }
-              : { background: '#2a2a2a', color: '#6b7280' }}>
-            {hole.active ? 'Active' : 'Inactive'}
-          </button>
-          <button onClick={onDelete} className="text-gray-700 hover:text-red-400 text-xl leading-none transition-colors shrink-0">×</button>
-        </>
+        <div className="px-4 pb-3 grid grid-cols-4 gap-1.5">
+          {CATEGORY_OPTIONS.map(opt => (
+            <button key={opt.value} type="button"
+              onClick={() => onCategoryChange(opt.value)}
+              disabled={saving}
+              className="py-1.5 rounded-lg text-xs font-medium transition-colors"
+              style={hole.category_mode === opt.value
+                ? { background: '#F5A423', color: '#000' }
+                : { background: '#111', color: '#6b7280', border: '1px solid #222' }}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   )

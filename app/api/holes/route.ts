@@ -6,12 +6,12 @@ export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.isTD) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { tournament_id, hole_number, sponsor_name, gender_split } = await req.json()
+  const { tournament_id, hole_number, sponsor_name, category_mode } = await req.json()
   if (!tournament_id || !hole_number) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
   const { data, error } = await supabaseAdmin
     .from('ctp_holes')
-    .insert({ tournament_id, hole_number, sponsor_name, gender_split: gender_split !== false })
+    .insert({ tournament_id, hole_number, sponsor_name, category_mode: category_mode ?? 'gendered' })
     .select()
     .single()
 

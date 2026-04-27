@@ -32,7 +32,13 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
   const [distance, setDistance] = useState('')
 
   const selectedHole = holes.find(h => h.id === holeId)
-  const isGendered = !selectedHole || selectedHole.gender_split !== false
+  const categoryMode = selectedHole?.category_mode ?? 'gendered'
+  // gendered = player picks M/W; others are auto-assigned
+  const needsGenderPick = !holeId || categoryMode === 'gendered'
+  const effectiveGender =
+    categoryMode === 'gendered'  ? gender :
+    categoryMode === 'open'      ? 'O' :
+    categoryMode === 'men_only'  ? 'M' : 'F'
 
   useEffect(() => {
     params.then(async ({ id }) => {
@@ -51,8 +57,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
     e.preventDefault()
     setError('')
     const dist = parseFloat(distance.replace(',', '.'))
-    const effectiveGender = isGendered ? gender : 'O'
-    if (!holeId || !playerName.trim() || (isGendered && !gender) || isNaN(dist) || dist <= 0) {
+    if (!holeId || !playerName.trim() || (needsGenderPick && categoryMode === 'gendered' && !gender) || isNaN(dist) || dist <= 0) {
       setError('Please fill in all fields correctly.')
       return
     }
@@ -73,6 +78,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
       setSuccess(true)
       setDistance('')
       setHoleId('')
+      setGender('')
     } else {
       const data = await res.json()
       setError(data.error ?? 'Something went wrong.')
@@ -114,7 +120,7 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
               value={playerName}
               onChange={e => setPlayerName(e.target.value)}
               placeholder="First and last name"
-              className="w-full rounded-xl px-4 py-3 text-white placeholder-gray-600 outline-none focus:ring-2 transition-all"
+              className="w-full rounded-xl px-4 py-3 text-white placeholder-gray-600 outline-none transition-all"
               style={{ background: '#191919', border: '1px solid #2a2a2a' }}
               onFocus={e => e.target.style.borderColor = '#F5A423'}
               onBlur={e => e.target.style.borderColor = '#2a2a2a'}
@@ -138,7 +144,8 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
             </select>
           </div>
 
-          {isGendered && (
+          {/* Category — only shown for gendered baskets */}
+          {holeId && categoryMode === 'gendered' && (
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">Category</label>
               <div className="grid grid-cols-2 gap-3">
@@ -157,6 +164,15 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Subtle hint for single-category baskets */}
+          {holeId && categoryMode !== 'gendered' && (
+            <div className="rounded-xl px-4 py-2.5 text-sm" style={{ background: '#191919', border: '1px solid #2a2a2a', color: '#6b7280' }}>
+              {categoryMode === 'open'      && 'Open category — no gender selection needed'}
+              {categoryMode === 'men_only'  && 'Men only basket'}
+              {categoryMode === 'women_only' && 'Women only basket'}
             </div>
           )}
 

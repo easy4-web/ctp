@@ -4,20 +4,28 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import { CategoryMode } from '@/lib/supabase'
 
-type HoleDraft = { hole_number: number; sponsor_name: string; gender_split: boolean }
+type HoleDraft = { hole_number: number; sponsor_name: string; category_mode: CategoryMode }
+
+const CATEGORY_OPTIONS: { value: CategoryMode; label: string }[] = [
+  { value: 'gendered',  label: 'Men + Women' },
+  { value: 'open',      label: 'Open' },
+  { value: 'men_only',  label: 'Men only' },
+  { value: 'women_only', label: 'Women only' },
+]
 
 export default function NewTournament() {
   const router = useRouter()
   const [name, setName] = useState('')
   const [date, setDate] = useState('')
-  const [holes, setHoles] = useState<HoleDraft[]>([{ hole_number: 1, sponsor_name: '', gender_split: true }])
+  const [holes, setHoles] = useState<HoleDraft[]>([{ hole_number: 1, sponsor_name: '', category_mode: 'gendered' }])
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
   function addHole() {
     const next = Math.max(...holes.map(h => h.hole_number), 0) + 1
-    setHoles([...holes, { hole_number: next, sponsor_name: '', gender_split: true }])
+    setHoles([...holes, { hole_number: next, sponsor_name: '', category_mode: 'gendered' }])
   }
 
   function removeHole(index: number) {
@@ -49,7 +57,7 @@ export default function NewTournament() {
       fetch('/api/holes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournament_id: tournament.id, hole_number: h.hole_number, sponsor_name: h.sponsor_name.trim() || null, gender_split: h.gender_split }),
+        body: JSON.stringify({ tournament_id: tournament.id, hole_number: h.hole_number, sponsor_name: h.sponsor_name.trim() || null, category_mode: h.category_mode }),
       })
     ))
     router.push(`/td/${tournament.id}`)
@@ -111,15 +119,15 @@ export default function NewTournament() {
                     <button type="button" onClick={() => removeHole(i)}
                       className="text-gray-600 hover:text-red-400 text-xl leading-none px-1 transition-colors shrink-0">×</button>
                   </div>
-                  <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid #2a2a2a' }}>
-                    {([true, false] as const).map(gs => (
-                      <button key={String(gs)} type="button"
-                        onClick={() => updateHole(i, 'gender_split', gs)}
-                        className="flex-1 py-1.5 text-xs font-medium transition-colors"
-                        style={h.gender_split === gs
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {CATEGORY_OPTIONS.map(opt => (
+                      <button key={opt.value} type="button"
+                        onClick={() => updateHole(i, 'category_mode', opt.value)}
+                        className="py-1.5 rounded-lg text-xs font-medium transition-colors"
+                        style={h.category_mode === opt.value
                           ? { background: '#F5A423', color: '#000' }
-                          : { background: '#191919', color: '#6b7280' }}>
-                        {gs ? 'Gendered (Men / Women)' : 'Open (no category)'}
+                          : { background: '#191919', color: '#6b7280', border: '1px solid #2a2a2a' }}>
+                        {opt.label}
                       </button>
                     ))}
                   </div>

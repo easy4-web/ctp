@@ -132,11 +132,12 @@ export default function TournamentDashboard({ params }: { params: Promise<{ id: 
                   )}
                 </div>
                 <div className="space-y-2">
-                  {hole.gender_split === false ? (
-                    <LeaderRow label="Open" leader={hole.leader_O} />
-                  ) : (
+                  {hole.category_mode === 'open'      && <LeaderRow label="Open"  leader={hole.leader_O} />}
+                  {hole.category_mode === 'men_only'  && <LeaderRow label="Men"   leader={hole.leader_M} />}
+                  {hole.category_mode === 'women_only' && <LeaderRow label="Women" leader={hole.leader_F} />}
+                  {(hole.category_mode === 'gendered' || !hole.category_mode) && (
                     <>
-                      <LeaderRow label="Men" leader={hole.leader_M} />
+                      <LeaderRow label="Men"   leader={hole.leader_M} />
                       <LeaderRow label="Women" leader={hole.leader_F} />
                     </>
                   )}
