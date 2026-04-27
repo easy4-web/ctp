@@ -47,7 +47,15 @@ export default function SubmitPage({ params }: { params: Promise<{ id: string }>
       if (res.ok) {
         const data = await res.json()
         setTournament(data)
-        setHoles((data.ctp_holes ?? []).filter((h: CtpHole) => h.active).sort((a: CtpHole, b: CtpHole) => a.hole_number - b.hole_number))
+        const activeHoles: CtpHole[] = (data.ctp_holes ?? [])
+          .filter((h: CtpHole) => h.active)
+          .sort((a: CtpHole, b: CtpHole) => a.hole_number - b.hole_number)
+        setHoles(activeHoles)
+        // Pre-select basket from ?hole= query param
+        const preselect = new URLSearchParams(window.location.search).get('hole')
+        if (preselect && activeHoles.find(h => h.id === preselect)) {
+          setHoleId(preselect)
+        }
       }
       setLoading(false)
     })

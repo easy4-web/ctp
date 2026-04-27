@@ -119,7 +119,11 @@ export default function TournamentDashboard({ params }: { params: Promise<{ id: 
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {holes.map(hole => (
-              <div key={hole.id} className="rounded-2xl p-5 border" style={{ background: '#191919', borderColor: '#2a2a2a' }}>
+              <Link key={hole.id} href={`/t/${tournamentId}/submit?hole=${hole.id}`}
+                className="rounded-2xl p-5 border block transition-all"
+                style={{ background: '#191919', borderColor: '#2a2a2a' }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = '#F5A423')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = '#2a2a2a')}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-black" style={{ color: '#F5A423' }}>{hole.hole_number}</span>
@@ -132,8 +136,8 @@ export default function TournamentDashboard({ params }: { params: Promise<{ id: 
                   )}
                 </div>
                 <div className="space-y-2">
-                  {hole.category_mode === 'open'      && <LeaderRow label="Open"  leader={hole.leader_O} />}
-                  {hole.category_mode === 'men_only'  && <LeaderRow label="Men"   leader={hole.leader_M} />}
+                  {hole.category_mode === 'open'       && <LeaderRow label="Open"  leader={hole.leader_O} />}
+                  {hole.category_mode === 'men_only'   && <LeaderRow label="Men"   leader={hole.leader_M} />}
                   {hole.category_mode === 'women_only' && <LeaderRow label="Women" leader={hole.leader_F} />}
                   {(hole.category_mode === 'gendered' || !hole.category_mode) && (
                     <>
@@ -142,7 +146,11 @@ export default function TournamentDashboard({ params }: { params: Promise<{ id: 
                     </>
                   )}
                 </div>
-              </div>
+                <div className="mt-4 pt-3 text-xs font-semibold text-center transition-colors"
+                  style={{ borderTop: '1px solid #2a2a2a', color: '#4b5563' }}>
+                  Tap to submit throw →
+                </div>
+              </Link>
             ))}
           </div>
         )}
