@@ -101,13 +101,6 @@ export default function TournamentDashboard({ params }: { params: Promise<{ id: 
             <p className="text-gray-500 text-xs">{new Date(tournament.date).toLocaleDateString('et-EE')}</p>
           </div>
         </div>
-        <Link
-          href={`/t/${tournamentId}/submit`}
-          className="px-4 py-2 rounded-lg font-semibold text-sm text-black transition-opacity hover:opacity-90"
-          style={{ background: '#F5A423' }}
-        >
-          Submit throw
-        </Link>
       </header>
 
       {/* Dashboard */}
@@ -124,15 +117,16 @@ export default function TournamentDashboard({ params }: { params: Promise<{ id: 
                 style={{ background: '#191919', borderColor: '#2a2a2a' }}
                 onMouseEnter={e => (e.currentTarget.style.borderColor = '#F5A423')}
                 onMouseLeave={e => (e.currentTarget.style.borderColor = '#2a2a2a')}>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
                     <span className="text-2xl font-black" style={{ color: '#F5A423' }}>{hole.hole_number}</span>
                     <span className="text-gray-500 text-sm font-medium">Basket</span>
                   </div>
                   {hole.sponsor_name && (
-                    <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ background: 'rgba(245,164,35,0.15)', color: '#F5A423' }}>
-                      {hole.sponsor_name}
-                    </span>
+                    <div className="rounded-xl px-3 py-2" style={{ background: 'rgba(245,164,35,0.12)', border: '1px solid rgba(245,164,35,0.25)' }}>
+                      <p className="text-xs uppercase tracking-widest font-medium mb-0.5" style={{ color: 'rgba(245,164,35,0.6)' }}>Sponsored by</p>
+                      <p className="font-bold text-base leading-tight" style={{ color: '#F5A423' }}>{hole.sponsor_name}</p>
+                    </div>
                   )}
                 </div>
                 <div className="space-y-2">
