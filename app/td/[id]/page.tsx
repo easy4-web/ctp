@@ -69,6 +69,16 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
     setSaving(null)
   }
 
+  async function toggleGenderSplit(hole: Hole) {
+    setSaving(hole.id)
+    const res = await fetch(`/api/holes/${hole.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gender_split: !hole.gender_split }),
+    })
+    if (res.ok) setHoles(holes.map(h => h.id === hole.id ? { ...h, gender_split: !h.gender_split } : h))
+    setSaving(null)
+  }
+
   async function updateSponsor(hole: Hole, sponsor: string) {
     setSaving(hole.id)
     const res = await fetch(`/api/holes/${hole.id}`, {
@@ -198,6 +208,7 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
           {holes.map(hole => (
             <HoleRow key={hole.id} hole={hole} saving={saving === hole.id} readonly={isArchived}
               onToggle={() => toggleHole(hole)}
+              onGenderSplitToggle={() => toggleGenderSplit(hole)}
               onSponsorSave={s => updateSponsor(hole, s)}
               onDelete={() => deleteHole(hole.id)} />
           ))}
@@ -244,9 +255,9 @@ export default function ManageTournament({ params }: { params: Promise<{ id: str
   )
 }
 
-function HoleRow({ hole, saving, readonly, onToggle, onSponsorSave, onDelete }: {
+function HoleRow({ hole, saving, readonly, onToggle, onGenderSplitToggle, onSponsorSave, onDelete }: {
   hole: Hole; saving: boolean; readonly: boolean
-  onToggle: () => void; onSponsorSave: (s: string) => void; onDelete: () => void
+  onToggle: () => void; onGenderSplitToggle: () => void; onSponsorSave: (s: string) => void; onDelete: () => void
 }) {
   const [editing, setEditing] = useState(false)
   const [sponsor, setSponsor] = useState(hole.sponsor_name ?? '')
@@ -276,12 +287,22 @@ function HoleRow({ hole, saving, readonly, onToggle, onSponsorSave, onDelete }: 
           </button>
         )}
       </div>
-      <span className="text-xs px-2.5 py-1 rounded-full font-medium shrink-0"
-        style={hole.gender_split
-          ? { background: 'rgba(99,102,241,0.12)', color: '#818cf8' }
-          : { background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>
-        {hole.gender_split ? 'Gendered' : 'Open'}
-      </span>
+      {readonly ? (
+        <span className="text-xs px-2.5 py-1 rounded-full font-medium shrink-0"
+          style={hole.gender_split
+            ? { background: 'rgba(99,102,241,0.12)', color: '#818cf8' }
+            : { background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>
+          {hole.gender_split ? 'Gendered' : 'Open'}
+        </span>
+      ) : (
+        <button onClick={onGenderSplitToggle} disabled={saving}
+          className="text-xs px-2.5 py-1 rounded-full font-semibold transition-colors shrink-0"
+          style={hole.gender_split
+            ? { background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }
+            : { background: 'rgba(52,211,153,0.15)', color: '#34d399', border: '1px solid rgba(52,211,153,0.3)' }}>
+          {hole.gender_split ? 'Gendered' : 'Open'}
+        </button>
+      )}
       {!readonly && (
         <>
           <button onClick={onToggle} disabled={saving}
